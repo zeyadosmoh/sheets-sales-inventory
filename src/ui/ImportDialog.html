@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #202124; margin: 0 4px; }
+    p.hint { color: #5f6368; margin: 4px 0 12px; }
+    #status { margin-top: 12px; white-space: pre-wrap; }
+    .ok { color: #188038; } .err { color: #b3261e; }
+    table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: 12px; }
+    th, td { border: 1px solid #dadce0; padding: 4px 6px; text-align: left; vertical-align: top; }
+    th { background: #f1f3f4; }
+    #issues { max-height: 220px; overflow: auto; }
+    button { margin-top: 10px; padding: 6px 14px; }
+  </style>
+</head>
+<body>
+  <p class="hint">Choose a sales CSV from your computer. Required columns: Date, SKU, Qty
+    (optional: Invoice No, Customer). The file is read in your browser; nothing is uploaded to Drive.</p>
+  <input type="file" id="file" accept=".csv,text/csv,text/plain">
+  <br><button id="go" disabled>Import</button>
+  <div id="status"></div>
+  <div id="issues"></div>
+
+  <script>
+    var MAX_BYTES = 5 * 1024 * 1024;
+    var fileInput = document.getElementById('file');
+    var goBtn = document.getElementById('go');
+    var statusEl = document.getElementById('status');
+    var issuesEl = document.getElementById('issues');
+
+    function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls || ''; }
+
+    fileInput.addEventListener('change', function () { goBtn.disabled = !fileInput.files.length; });
+
+    goBtn.addEventListener('click', function () {
+      var file = fileInput.files[0];
+      if (!file) return;
+      if (file.size > MAX_BYTES) { setStatus('File is too large (max 5 MB).', 'err'); return; }
+      goBtn.disabled = true;
+      issuesEl.textContent = '';
+      setStatus('Reading ' + file.name + ' ...');
+      var reader = new FileReader();
+      reader.onerror = function () { setStatus('Could not read the file.', 'err'); goBtn.disabled = false; };
+      reader.onload = function () {
+        setStatus('Cleaning and importing ...');
+        google.script.run
+          .withSuccessHandler(showResult)
+          .withFailureHandler(function (err) { setStatus('Error: ' + err.message, 'err'); goBtn.disabled = false; })
+          .importCsvText(String(reader.result), file.name);
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
+
+    function showResult(res) {
+      goBtn.disabled = false;
+      setStatus((res.ok ? 'Done. ' : 'Not imported: ') + res.message, res.ok ? 'ok' : 'err');
+      if (!res.issues || !res.issues.length) return;
+      var table = document.createElement('table');
+      var head = table.insertRow();
+      ['Row', 'Type', 'Reason'].forEach(function (h) {
+        var th = document.createElement('th'); th.textContent = h; head.appendChild(th);
+      });
+      res.issues.forEach(function (i) {
+        var tr = table.insertRow();
+        [i.rowNumber, i.type, i.reason].forEach(function (v) { tr.insertCell().textContent = v; });
+      });
+      issuesEl.appendChild(table);
+    }
+  </script>
+</body>
+</html>
