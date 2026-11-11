@@ -18,8 +18,13 @@ function filterSalesByDate(sales, fromIso, toIso) {
   });
 }
 
+/**
+ * options.topN    - size of topProducts (default 10)
+ * options.todayIso - when given, an unfinished month is labelled "Mon YYYY (to date)"
+ */
 function computeKpis(sales, products, options) {
   var topN = (options && options.topN) || 10;
+  var todayIso = options && options.todayIso;
   var bySku = indexBy(products, 'sku');
   var revenue = 0, cost = 0, units = 0;
   var orders = {};
@@ -56,7 +61,7 @@ function computeKpis(sales, products, options) {
     grossProfit: grossProfit,
     marginPct: revenue ? Math.round((grossProfit / revenue) * 1000) / 1000 : 0,
     revenueByMonth: Object.keys(byMonth).sort().map(function (m) {
-      return { month: m, label: monthLabel(m), revenue: round2(byMonth[m]) };
+      return { month: m, label: monthLabelAsOf(m, todayIso), revenue: round2(byMonth[m]) };
     }),
     revenueByCategory: Object.keys(byCategory)
       .map(function (c) { return { category: c, revenue: round2(byCategory[c]) }; })

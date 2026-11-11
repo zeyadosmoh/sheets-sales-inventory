@@ -1,8 +1,9 @@
 /**
  * Invoice PDF for the selected Sales row.
- * Data comes from the pure buildInvoice(); this file only fills the template,
- * exports the PDF, and saves it in a Drive folder the script itself created
- * (so the narrow drive.file scope is enough).
+ * Data comes from the pure buildInvoice(), layout from the pure buildInvoiceHtml();
+ * this file converts that HTML to PDF (Utilities, no extra scope) and saves it in
+ * a Drive folder the script itself created (so the narrow drive.file scope is enough).
+ * No sheets are hidden, exported or modified apart from filling in a missing invoice no.
  */
 
 var INVOICE_FOLDER_NAME = 'Shop Invoices (synthetic sample data)';
@@ -32,23 +33,14 @@ function generateInvoiceForSelection() {
   var settings = readSettings_().values;
   var invoice = buildInvoice(invoiceNo, readSales_(), indexBy(readProducts_(), 'sku'), settings);
   if (!invoice) { ui.alert('No sales lines found for ' + invoiceNo + '.'); return; }
-  if (invoice.lines.length > INVOICE_LAYOUT.MAX_LINES) {
-    ui.alert(invoiceNo + ' has ' + invoice.lines.length + ' lines; the template fits ' + INVOICE_LAYOUT.MAX_LINES + '.');
-    return;
-  }
 
   try {
-    // Resolve the Drive folder BEFORE touching sheet visibility: a Drive failure
-    // then happens while every sheet is still in its normal state.
-    var folderId = getInvoiceFolderId_();
-    var template = sheet_(SHEET.INVOICE);
-    fillInvoiceTemplate_(template, invoice);
-    var blob = exportSheetAsPdf_(ss, template, invoiceFileName(invoice));
-    var file = savePdfToFolder_(blob, folderId);
+    var blob = invoicePdfBlob_(invoice, settings);
+    var file = savePdfToFolder_(blob, getInvoiceFolderId_());
   } catch (e) {
     console.error('Invoice PDF failed for ' + invoiceNo + ': ' + (e && e.stack || e));
     ui.alert('Could not create the invoice PDF',
-      'Invoice ' + invoiceNo + ' was not saved. Your sheets were left unchanged.\n\n' +
+      'Invoice ' + invoiceNo + ' was not saved.\n\n' +
       'Details: ' + (e && e.message ? e.message : String(e)) + '\n\n' +
       'Try again in a moment. If it keeps failing, reload the spreadsheet and re-run it.',
       ui.ButtonSet.OK);
@@ -62,43 +54,13 @@ function generateInvoiceForSelection() {
   ui.showModalDialog(html, 'Invoice ' + invoiceNo);
 }
 
-function fillInvoiceTemplate_(sh, invoice) {
-  sh.getRange('A1').setValue(invoice.shopName);
-  sh.getRange('B5:B7').setValues([[invoice.invoiceNo], [isoToDate_(invoice.date)], [sanitizeCellText(invoice.customer)]]);
-  var first = INVOICE_LAYOUT.FIRST_LINE_ROW;
-  sh.getRange(first, 1, INVOICE_LAYOUT.MAX_LINES, 5).clearContent();
-  sh.getRange(first, 1, invoice.lines.length, 5).setValues(invoice.lines.map(function (l) {
-    return [l.sku, sanitizeCellText(l.name), l.qty, l.unitPrice, l.total];
-  }));
-  sh.getRange(INVOICE_LAYOUT.TOTAL_ROW, 5).setValue(invoice.total);
-}
-
-/**
- * Export ONE sheet as PDF using Spreadsheet.getAs(), which exports every
- * visible sheet - so hide all others only for the export itself, then ALWAYS
- * restore the original visibility in finally (each restore step is isolated so
- * one failure cannot leave other sheets hidden). No Drive calls happen in here.
- */
-function exportSheetAsPdf_(ss, target, fileName) {
-  var sheets = ss.getSheets();
-  var wasHidden = sheets.map(function (s) { return s.isSheetHidden(); });
-  var active = ss.getActiveSheet();
-  try {
-    target.showSheet();
-    sheets.forEach(function (s) { if (s.getSheetId() !== target.getSheetId()) s.hideSheet(); });
-    SpreadsheetApp.flush();
-    return ss.getAs('application/pdf').setName(fileName);
-  } finally {
-    // Show first (a spreadsheet cannot have every sheet hidden), then re-hide.
-    sheets.forEach(function (s, i) { if (!wasHidden[i]) safely_(function () { s.showSheet(); }); });
-    sheets.forEach(function (s, i) { if (wasHidden[i]) safely_(function () { s.hideSheet(); }); });
-    safely_(function () { if (active && !active.isSheetHidden()) ss.setActiveSheet(active); });
-    safely_(function () { SpreadsheetApp.flush(); });
-  }
-}
-
-function safely_(fn) {
-  try { fn(); } catch (e) { console.error('Sheet visibility restore step failed: ' + e); }
+/** HTML invoice -> PDF blob named like "INV-2026-00042 - Demo Shop.pdf". */
+function invoicePdfBlob_(invoice, settings) {
+  var pdfName = invoiceFileName(invoice);
+  var html = buildInvoiceHtml(invoice, settings);
+  return Utilities.newBlob(html, 'text/html', pdfName.replace(/\.pdf$/, '') + '.html')
+    .getAs('application/pdf')
+    .setName(pdfName);
 }
 
 /*

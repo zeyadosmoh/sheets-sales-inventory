@@ -51,7 +51,6 @@ function buildWorkbook_(ss) {
   buildImportSheet_(ss.insertSheet(SHEET.IMPORT, 4));
   buildImportLogSheet_(ss.insertSheet(SHEET.IMPORT_LOG, 5));
   buildSettingsSheet_(ss.insertSheet(SHEET.SETTINGS, 6), settings);
-  buildInvoiceTemplate_(ss.insertSheet(SHEET.INVOICE, 7), settings);
   ss.deleteSheet(temp);
 
   buildDashboardSheet_(dash, settings);
@@ -239,30 +238,6 @@ function buildSettingsSheet_(sh, settings) {
   sh.setColumnWidth(1, 170); sh.setColumnWidth(2, 220); sh.setColumnWidth(3, 460);
 }
 
-/* ---------- Invoice template ---------- */
-
-var INVOICE_LAYOUT = { FIRST_LINE_ROW: 10, MAX_LINES: 20, TOTAL_ROW: 31 };
-
-function buildInvoiceTemplate_(sh, settings) {
-  trimColumns_(sh, 5);
-  sh.setHiddenGridlines(true);
-  sh.getRange('A1').setValue(settings.shopName).setFontSize(18).setFontWeight('bold');
-  sh.getRange('A2').setValue('INVOICE').setFontSize(12).setFontColor('#555555');
-  sh.getRange('A3').setValue(SAMPLE_DATA_LABEL + ' - not a real business').setFontStyle('italic').setFontColor('#999999');
-  sh.getRange('A5:A7').setValues([['Invoice No'], ['Date'], ['Customer']]).setFontWeight('bold');
-  sh.getRange('B6').setNumberFormat('yyyy-mm-dd');
-  sh.getRange(9, 1, 1, 5).setValues([['SKU', 'Product', 'Qty', 'Unit Price', 'Total']])
-    .setFontWeight('bold').setBackground(HEADER_BG).setFontColor('#ffffff');
-  sh.getRange(INVOICE_LAYOUT.FIRST_LINE_ROW, 4, INVOICE_LAYOUT.MAX_LINES, 2).setNumberFormat(currencyFormat_(settings.currency));
-  sh.getRange(INVOICE_LAYOUT.TOTAL_ROW, 4).setValue('Total').setFontWeight('bold');
-  sh.getRange(INVOICE_LAYOUT.TOTAL_ROW, 5).setNumberFormat(currencyFormat_(settings.currency)).setFontWeight('bold');
-  sh.getRange(INVOICE_LAYOUT.TOTAL_ROW + 2, 1).setValue('Thank you for your purchase.').setFontColor('#555555');
-  sh.setColumnWidth(1, 90); sh.setColumnWidth(2, 260); sh.setColumnWidth(3, 50); sh.setColumnWidths(4, 2, 110);
-  var max = sh.getMaxRows();
-  if (max > 40) sh.deleteRows(41, max - 40);
-  sh.hideSheet();
-}
-
 /* ---------- Dashboard ---------- */
 
 function buildDashboardSheet_(sh, settings) {
@@ -281,11 +256,6 @@ function buildDashboardSheet_(sh, settings) {
   sh.getRange('B9').setNumberFormat('0');
 
   styleDashboardTables_(sh, settings);
-
-  sh.setColumnWidth(1, 170); sh.setColumnWidth(2, 150); sh.setColumnWidth(3, 24);
-  sh.setColumnWidth(4, 100); sh.setColumnWidth(5, 120); sh.setColumnWidth(6, 24);
-  sh.setColumnWidth(7, 120); sh.setColumnWidth(8, 120); sh.setColumnWidth(9, 24);
-  sh.setColumnWidth(10, 190); sh.setColumnWidth(11, 60); sh.setColumnWidth(12, 120);
 }
 
 /**
@@ -308,6 +278,12 @@ function styleDashboardTables_(sh, settings) {
   sh.getRange('J6:J15').setNumberFormat('@');
   sh.getRange('K6:K15').setNumberFormat(money);
   sh.getRange('L6:L15').setNumberFormat('#,##0');
+  // Column widths: wide enough for "Nov 2026 (to date)" and full currency values
+  // such as "EGP 129,405.00" (Revenue columns E, H, K).
+  sh.setColumnWidth(1, 170); sh.setColumnWidth(2, 150); sh.setColumnWidth(3, 24);
+  sh.setColumnWidth(4, 150); sh.setColumnWidth(5, 140); sh.setColumnWidth(6, 24);
+  sh.setColumnWidth(7, 120); sh.setColumnWidth(8, 140); sh.setColumnWidth(9, 24);
+  sh.setColumnWidth(10, 190); sh.setColumnWidth(11, 140); sh.setColumnWidth(12, 70);
   // One height for every table row (titles, headers, KPI and data rows) so the
   // larger KPI/title fonts do not make some rows taller than others.
   sh.setRowHeightsForced(DASH.TABLE_FIRST_ROW, DASH.TABLE_LAST_ROW - DASH.TABLE_FIRST_ROW + 1, DASH.TABLE_ROW_HEIGHT);

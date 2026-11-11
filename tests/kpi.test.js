@@ -69,3 +69,14 @@ test('filterSalesByDate is inclusive', () => {
   assert.equal(lib.filterSalesByDate(sales, '2026-05-20', '2026-06-02').length, 2);
   assert.equal(lib.filterSalesByDate(sales, null, '2026-05-01').length, 2);
 });
+
+test('unfinished month is labelled "(to date)" when todayIso is given', () => {
+  const nov = sales.concat([{ date: '2026-11-02', invoice: 'INV-2026-00009', sku: 'A', qty: 1, unitPrice: 10 }]);
+  const labels = plain(lib.computeKpis(nov, products, { todayIso: '2026-11-11' })).revenueByMonth.map((m) => m.label);
+  assert.deepEqual(labels, ['May 2026', 'Jun 2026', 'Nov 2026 (to date)']);
+  // Last day of the month is still "to date"; the next day the month is complete.
+  assert.equal(lib.monthLabelAsOf('2026-11', '2026-11-30'), 'Nov 2026 (to date)');
+  assert.equal(lib.monthLabelAsOf('2026-11', '2026-12-01'), 'Nov 2026');
+  // Without todayIso nothing changes (backwards compatible).
+  assert.equal(lib.monthLabelAsOf('2026-11'), 'Nov 2026');
+});

@@ -39,7 +39,9 @@ function refreshDashboard_() {
   var sh = sheet_(SHEET.DASHBOARD);
   var products = readProducts_();
   var sales = readSales_();
-  var k = computeKpis(sales, products, { topN: DASH.TOP_ROWS });
+  var todayIso = Utilities.formatDate(new Date(), SCRIPT_TIMEZONE, 'yyyy-MM-dd');
+  // todayIso -> the unfinished current month is labelled "Mon YYYY (to date)".
+  var k = computeKpis(sales, products, { topN: DASH.TOP_ROWS, todayIso: todayIso });
   var lowCount = lowStockItems(readInventory_()).length;
 
   sh.getRange(DASH.SUBTITLE).setValue(SAMPLE_DATA_LABEL + '  |  Last refreshed ' +

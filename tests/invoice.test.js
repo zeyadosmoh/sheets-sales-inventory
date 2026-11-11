@@ -59,3 +59,63 @@ test('buildInvoice totals lines and uses stored unit price', () => {
   assert.equal(lib.invoiceFileName(inv), 'INV-2026-00001 - Demo Shop.pdf');
   assert.equal(lib.buildInvoice('INV-2026-09999', lines, productsBySku, {}), null);
 });
+
+// ---------- buildInvoiceHtml ----------
+
+function htmlFixture(customer) {
+  const productsBySku = {
+    A: { name: 'Apple', price: 10 },
+    B: { name: 'Bread', price: 5 },
+    C: { name: 'Cheese & Crackers', price: 1250 }
+  };
+  const lines = [
+    { date: '2026-11-03', invoice: 'INV-2026-00042', sku: 'A', qty: 3, unitPrice: 9.5, customer },
+    { date: '2026-11-03', invoice: 'INV-2026-00042', sku: 'B', qty: 2, unitPrice: '', customer },
+    { date: '2026-11-03', invoice: 'INV-2026-00042', sku: 'C', qty: 8, unitPrice: 1250, customer }
+  ];
+  const settings = { currency: 'EGP', shopName: 'Demo Shop (synthetic)' };
+  const invoice = lib.buildInvoice('INV-2026-00042', lines, productsBySku, settings);
+  return { invoice, settings, html: lib.buildInvoiceHtml(invoice, settings) };
+}
+
+test('buildInvoiceHtml shows invoice no, date, customer and shop name', () => {
+  const { html } = htmlFixture('Mona Ali');
+  assert.match(html, /^<!DOCTYPE html>/);
+  assert.ok(html.includes('INV-2026-00042'));
+  assert.ok(html.includes('2026-11-03'));
+  assert.ok(html.includes('Mona Ali'));
+  assert.ok(html.includes('Demo Shop (synthetic)'));
+  assert.ok(html.includes('size: A4'), 'A4 print CSS');
+});
+
+test('buildInvoiceHtml lists every line with qty, unit price and line total', () => {
+  const { html } = htmlFixture('Mona Ali');
+  const rows = html.split('\n').filter((l) => l.startsWith('<tr><td>'));
+  assert.equal(rows.length, 3, 'one table row per invoice line');
+  assert.ok(rows[0].includes('>A<') && rows[0].includes('Apple') && rows[0].includes('>3<') &&
+    rows[0].includes('EGP 9.50') && rows[0].includes('EGP 28.50'));
+  assert.ok(rows[1].includes('Bread') && rows[1].includes('EGP 5.00') && rows[1].includes('EGP 10.00'));
+  // Product names are escaped too.
+  assert.ok(rows[2].includes('Cheese &amp; Crackers') && rows[2].includes('EGP 1,250.00') && rows[2].includes('EGP 10,000.00'));
+});
+
+test('buildInvoiceHtml prints the correct total', () => {
+  const { invoice, html } = htmlFixture('Mona Ali');
+  assert.equal(invoice.total, 10038.5);
+  const totalRow = html.split('\n').find((l) => l.startsWith('<tr class="total">'));
+  assert.ok(totalRow.includes('EGP 10,038.50'), totalRow);
+});
+
+test('buildInvoiceHtml escapes injected HTML in the customer name', () => {
+  const evil = '<script>alert("x")</script><img src=x onerror=alert(1)>';
+  const { html } = htmlFixture(evil);
+  assert.ok(!html.includes('<script>'), 'no raw script tag');
+  assert.ok(!html.includes('<img'), 'no raw img tag');
+  assert.ok(html.includes('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&lt;img src=x onerror=alert(1)&gt;'));
+});
+
+test('buildInvoiceHtml carries the synthetic-data label', () => {
+  const { html } = htmlFixture('');
+  assert.ok(html.includes('Synthetic sample data - not a real business'));
+  assert.ok(html.includes('Walk-in'), 'blank customer prints as Walk-in');
+});

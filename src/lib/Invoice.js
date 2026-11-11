@@ -95,3 +95,55 @@ function invoiceFileName(invoice) {
   var shop = String(invoice.shopName || '').replace(/[\\\/:*?"<>|]+/g, '').trim();
   return invoice.invoiceNo + (shop ? ' - ' + shop : '') + '.pdf';
 }
+
+/**
+ * Printable invoice as a standalone HTML page (A4). PURE.
+ * Every piece of data text goes through escapeHtml. Converted to PDF by the
+ * service layer (HTML blob -> application/pdf).
+ */
+function buildInvoiceHtml(invoice, settings) {
+  var cur = (invoice && invoice.currency) || (settings && settings.currency) || '';
+  var shop = (invoice && invoice.shopName) || (settings && settings.shopName) || '';
+  var money = function (n) { return escapeHtml(formatMoney(n, cur)); };
+  var rows = invoice.lines.map(function (l) {
+    return '<tr><td>' + escapeHtml(l.sku) + '</td><td>' + escapeHtml(l.name) + '</td>' +
+      '<td class="num">' + escapeHtml(l.qty) + '</td><td class="num">' + money(l.unitPrice) + '</td>' +
+      '<td class="num">' + money(l.total) + '</td></tr>';
+  }).join('\n');
+  return [
+    '<!DOCTYPE html>',
+    '<html><head><meta charset="utf-8"><title>' + escapeHtml(invoice.invoiceNo) + '</title>',
+    '<style>',
+    '@page { size: A4; margin: 18mm; }',
+    'body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #202124; }',
+    'h1 { font-size: 20pt; margin: 0 0 2pt 0; }',
+    '.doc { font-size: 12pt; color: #555555; letter-spacing: 2pt; margin: 0 0 4pt 0; }',
+    '.synthetic { font-style: italic; color: #888888; font-size: 9pt; margin: 0 0 14pt 0; }',
+    'table { border-collapse: collapse; width: 100%; }',
+    '.meta td { padding: 2pt 8pt 2pt 0; }',
+    '.meta td.k { font-weight: bold; width: 90pt; }',
+    '.lines { margin-top: 14pt; }',
+    '.lines th { background: #1f4e79; color: #ffffff; text-align: left; padding: 5pt; }',
+    '.lines td { border-bottom: 1px solid #dddddd; padding: 5pt; }',
+    '.num { text-align: right; }',
+    '.lines th.num { text-align: right; }',
+    '.total td { font-weight: bold; border-top: 2px solid #202124; border-bottom: none; }',
+    '.thanks { margin-top: 18pt; color: #555555; }',
+    '</style></head><body>',
+    '<h1>' + escapeHtml(shop) + '</h1>',
+    '<p class="doc">INVOICE</p>',
+    '<p class="synthetic">Synthetic sample data - not a real business</p>',
+    '<table class="meta">',
+    '<tr><td class="k">Invoice No</td><td>' + escapeHtml(invoice.invoiceNo) + '</td></tr>',
+    '<tr><td class="k">Date</td><td>' + escapeHtml(invoice.date) + '</td></tr>',
+    '<tr><td class="k">Customer</td><td>' + escapeHtml(invoice.customer) + '</td></tr>',
+    '</table>',
+    '<table class="lines">',
+    '<tr><th>SKU</th><th>Product</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Total</th></tr>',
+    rows,
+    '<tr class="total"><td colspan="4" class="num">Total</td><td class="num">' + money(invoice.total) + '</td></tr>',
+    '</table>',
+    '<p class="thanks">Thank you for your purchase.</p>',
+    '</body></html>'
+  ].join('\n');
+}

@@ -103,6 +103,19 @@ function daysBetweenIso(fromIso, toIso) {
   return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000);
 }
 
+/**
+ * True when the month is not finished as of todayIso (the current month, or a
+ * future one). Without todayIso every month counts as complete.
+ */
+function isPartialMonth(yyyyMm, todayIso) {
+  return !!todayIso && String(yyyyMm) >= String(todayIso).slice(0, 7);
+}
+
+/** "2026-11" + today in Nov 2026 -> "Nov 2026 (to date)"; complete months -> "May 2026". */
+function monthLabelAsOf(yyyyMm, todayIso) {
+  return monthLabel(yyyyMm) + (isPartialMonth(yyyyMm, todayIso) ? ' (to date)' : '');
+}
+
 /** "2026-05" -> "May 2026" */
 function monthLabel(yyyyMm) {
   var p = String(yyyyMm).split('-');

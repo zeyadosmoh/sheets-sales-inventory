@@ -14,8 +14,7 @@ var SHEET = {
   INVENTORY: 'Inventory',
   IMPORT: 'Import',
   IMPORT_LOG: 'Import_Log',
-  SETTINGS: 'Settings',
-  INVOICE: 'Invoice_Template'
+  SETTINGS: 'Settings'
 };
 
 var HEADERS = {

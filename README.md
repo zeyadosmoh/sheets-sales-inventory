@@ -23,7 +23,7 @@ from code, versioned in Git, and deployed with [clasp](https://github.com/google
 - **Import & clean CSV**: pick a CSV on your computer (read in the browser, no Drive access) or paste rows into the Import sheet. Cleaning:
   trims spaces, unifies case, parses mixed date formats, converts Arabic-Indic digits, drops exact duplicates,
   skips rows already in Sales, rejects invalid rows into Import_Log with the reason, and shows a summary.
-- **Generate invoice PDF** for the selected sale: fills a template sheet and saves the PDF to a Drive folder.
+- **Generate invoice PDF** for the selected sale: builds a one-page A4 invoice from HTML (no sheet export) and saves the PDF to a Drive folder the script created (`drive.file` scope only).
 - **Refresh dashboard**
 - **Automation**: install/remove time triggers; send the alert or summary now.
   - Daily low-stock email (only when something is LOW or OUT).
