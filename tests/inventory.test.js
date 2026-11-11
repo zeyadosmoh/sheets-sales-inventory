@@ -13,7 +13,8 @@ test('computeOnHand = opening + purchases - sold, tolerating blanks', () => {
 
 test('inventoryStatus boundaries', () => {
   assert.equal(lib.inventoryStatus(0, 10), 'OUT');
-  assert.equal(lib.inventoryStatus(-3, 10), 'OUT');
+  assert.equal(lib.inventoryStatus(-3, 10), 'OVERSOLD');
+  assert.equal(lib.inventoryStatus(-0.5, 0), 'OVERSOLD');
   assert.equal(lib.inventoryStatus(1, 10), 'LOW');
   assert.equal(lib.inventoryStatus(10, 10), 'LOW'); // at reorder level -> LOW
   assert.equal(lib.inventoryStatus(11, 10), 'OK');
@@ -34,4 +35,18 @@ test('lowStockItems: only LOW/OUT, OUT first then lowest stock', () => {
   ];
   assert.deepEqual(plain(lib.lowStockItems(rows)).map((r) => [r.sku, r.status]), [['C', 'OUT'], ['D', 'LOW'], ['B', 'LOW']]);
   assert.deepEqual(plain(lib.lowStockItems([])), []);
+});
+
+test('OVERSOLD (< 0) is separate from OUT (= 0), sorted first and counted as needing attention', () => {
+  const rows = [
+    { sku: 'OK1', name: 'fine', onHand: 40, reorderLevel: 10 },
+    { sku: 'LOW1', name: 'low', onHand: 5, reorderLevel: 10 },
+    { sku: 'OUT1', name: 'out', onHand: 0, reorderLevel: 10 },
+    { sku: 'MJ', name: 'Mango Juice', onHand: -8, reorderLevel: 10 },
+    { sku: 'NEG2', name: 'neg', onHand: -2, reorderLevel: 10 }
+  ];
+  const items = plain(lib.lowStockItems(rows));
+  assert.deepEqual(items.map((r) => [r.sku, r.status]),
+    [['MJ', 'OVERSOLD'], ['NEG2', 'OVERSOLD'], ['OUT1', 'OUT'], ['LOW1', 'LOW']]);
+  assert.equal(items.length, 4, 'dashboard/weekly "Low / out / oversold" count includes oversold');
 });

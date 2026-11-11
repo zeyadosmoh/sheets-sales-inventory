@@ -8,7 +8,7 @@ var DASH = {
   SUBTITLE: 'A2',
   KPI_LABELS: 'A4:A10',
   KPI_VALUES: 'B4:B10',
-  KPI_NAMES: ['Revenue', 'Orders', 'Avg order value', 'Units sold', 'Gross margin', 'Low / out of stock items', 'Top product'],
+  KPI_NAMES: ['Revenue', 'Orders', 'Avg order value', 'Units sold', 'Gross margin', 'Low / out / oversold items', 'Top product'],
   MONTH_TITLE: 'D4', MONTH_HEADER: 'D5:E5', MONTH_DATA: 'D6:E17', MONTH_ROWS: 12,
   CAT_TITLE: 'G4', CAT_HEADER: 'G5:H5', CAT_DATA: 'G6:H15', CAT_ROWS: 10,
   TOP_TITLE: 'J4', TOP_HEADER: 'J5:L5', TOP_DATA: 'J6:L15', TOP_ROWS: 10, // Product | Revenue | Units

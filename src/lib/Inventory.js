@@ -8,10 +8,14 @@ function computeOnHand(opening, purchases, sold) {
   return (Number(opening) || 0) + (Number(purchases) || 0) - (Number(sold) || 0);
 }
 
-/** OUT when nothing left, LOW at or below the reorder level, otherwise OK. */
+/**
+ * OVERSOLD when on hand is negative (more sold than opening + purchases: a data
+ * problem to fix), OUT at exactly 0, LOW at or below the reorder level, else OK.
+ */
 function inventoryStatus(onHand, reorderLevel) {
   var stock = Number(onHand) || 0;
-  if (stock <= 0) return STATUS.OUT;
+  if (stock < 0) return STATUS.OVERSOLD;
+  if (stock === 0) return STATUS.OUT;
   if (stock <= (Number(reorderLevel) || 0)) return STATUS.LOW;
   return STATUS.OK;
 }
@@ -25,8 +29,10 @@ function soldBySku(sales) {
   return out;
 }
 
+var STATUS_PRIORITY = { OVERSOLD: 0, OUT: 1, LOW: 2, OK: 3 };
+
 /**
- * Items that need attention, OUT first, then lowest stock.
+ * Items that need attention: OVERSOLD first, then OUT, then LOW; lowest stock first within each.
  * rows: { sku, name, onHand, reorderLevel }
  */
 function lowStockItems(rows) {
@@ -37,7 +43,7 @@ function lowStockItems(rows) {
     })
     .filter(function (r) { return r.status !== STATUS.OK; })
     .sort(function (a, b) {
-      if (a.status !== b.status) return a.status === STATUS.OUT ? -1 : 1;
+      if (a.status !== b.status) return STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
       return a.onHand - b.onHand || (a.sku < b.sku ? -1 : 1);
     });
 }

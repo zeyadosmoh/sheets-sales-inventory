@@ -3,24 +3,40 @@
  * Return { subject, body, htmlBody } for MailApp.sendEmail, or null when there is nothing to send.
  */
 
+/**
+ * "on hand: 4", or for negative stock "Oversold by 8 - check purchases/opening stock"
+ * (negative on hand means sales exceed opening stock + purchases: a data problem).
+ */
+function stockText(item) {
+  if (item.status === STATUS.OVERSOLD) {
+    return 'Oversold by ' + Math.abs(Number(item.onHand) || 0) + ' - check purchases/opening stock';
+  }
+  return 'on hand: ' + item.onHand;
+}
+
 function buildLowStockEmail(items, settings, sheetUrl, todayIso) {
   if (!items || !items.length) return null;
   var shop = settings.shopName;
-  var outCount = items.filter(function (i) { return i.status === STATUS.OUT; }).length;
+  var count = function (status) { return items.filter(function (i) { return i.status === status; }).length; };
+  var outCount = count(STATUS.OUT), oversoldCount = count(STATUS.OVERSOLD);
+  var notes = [];
+  if (outCount) notes.push(outCount + ' out of stock');
+  if (oversoldCount) notes.push(oversoldCount + ' oversold');
   var subject = '[' + shop + '] Stock alert: ' + items.length + ' item(s) need reordering' +
-    (outCount ? ' (' + outCount + ' out of stock)' : '');
+    (notes.length ? ' (' + notes.join(', ') + ')' : '');
 
   var textLines = items.map(function (i) {
-    return '- ' + i.status + '  ' + i.sku + '  ' + i.name + '  on hand: ' + i.onHand + ' (reorder at ' + i.reorderLevel + ')';
+    return '- ' + i.status + '  ' + i.sku + '  ' + i.name + '  ' + stockText(i) + ' (reorder at ' + i.reorderLevel + ')';
   });
   var body = 'Stock alert for ' + todayIso + '\n\n' + textLines.join('\n') +
     '\n\nOpen the sheet: ' + sheetUrl + '\n\n' + SAMPLE_DATA_LABEL + '.';
 
   var rows = items.map(function (i) {
-    var color = i.status === STATUS.OUT ? '#b3261e' : '#8a5300';
+    var color = i.status === STATUS.LOW ? '#8a5300' : '#b3261e';
     return '<tr><td style="color:' + color + ';font-weight:bold">' + escapeHtml(i.status) + '</td>' +
       '<td>' + escapeHtml(i.sku) + '</td><td>' + escapeHtml(i.name) + '</td>' +
-      '<td style="text-align:right">' + i.onHand + '</td><td style="text-align:right">' + i.reorderLevel + '</td></tr>';
+      '<td style="text-align:right">' + escapeHtml(i.status === STATUS.OVERSOLD ? stockText(i) : i.onHand) + '</td>' +
+      '<td style="text-align:right">' + i.reorderLevel + '</td></tr>';
   }).join('');
   var htmlBody = '<p>Stock alert for <b>' + escapeHtml(todayIso) + '</b>:</p>' +
     '<table cellpadding="6" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px">' +
@@ -39,7 +55,7 @@ function buildWeeklySummaryEmail(kpis, settings, sheetUrl, fromIso, toIso, lowSt
     ['Orders', String(kpis.orders)],
     ['Avg order value', formatMoney(kpis.avgOrderValue, cur)],
     ['Units sold', String(kpis.unitsSold)],
-    ['Low / out of stock items', String(lowStockCount)]
+    ['Low / out / oversold items', String(lowStockCount)]
   ];
   var top = (kpis.topProducts || []).slice(0, 5);
 

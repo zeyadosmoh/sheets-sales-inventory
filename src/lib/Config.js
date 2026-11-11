@@ -26,7 +26,7 @@ var HEADERS = {
   SETTINGS: ['Setting', 'Value', 'Notes']
 };
 
-var STATUS = { OK: 'OK', LOW: 'LOW', OUT: 'OUT' };
+var STATUS = { OK: 'OK', LOW: 'LOW', OUT: 'OUT', OVERSOLD: 'OVERSOLD' };
 
 /** Import limits / sanity rules. */
 var IMPORT_RULES = {

@@ -46,7 +46,21 @@ test('weekly summary email shows KPIs and top products', () => {
   const mail = plain(lib.buildWeeklySummaryEmail(kpis, settings, 'https://sheet', '2026-11-02', '2026-11-08', 4));
   assert.equal(mail.subject, '[Demo Shop] Weekly summary 2026-11-02 to 2026-11-08');
   assert.match(mail.body, /Revenue: EGP 1,250.50/);
-  assert.match(mail.body, /Low \/ out of stock items: 4/);
+  assert.match(mail.body, /Low \/ out \/ oversold items: 4/);
   assert.match(mail.body, /1\. Apple - EGP 500.00/);
   assert.match(mail.htmlBody, /href="https:\/\/sheet"/);
+});
+
+test('low-stock email explains OVERSOLD items instead of a negative on-hand', () => {
+  const mail = plain(lib.buildLowStockEmail([
+    { sku: 'MJ-1L', name: 'Mango Juice', onHand: -8, reorderLevel: 10, status: 'OVERSOLD' },
+    { sku: 'A', name: 'Milk', onHand: 0, reorderLevel: 10, status: 'OUT' },
+    { sku: 'B', name: 'Bread', onHand: 4, reorderLevel: 10, status: 'LOW' }
+  ], settings, 'https://sheet', '2026-11-11'));
+  assert.equal(mail.subject, '[Demo Shop] Stock alert: 3 item(s) need reordering (1 out of stock, 1 oversold)');
+  assert.match(mail.body, /OVERSOLD {2}MJ-1L {2}Mango Juice {2}Oversold by 8 - check purchases\/opening stock/);
+  assert.match(mail.htmlBody, /Oversold by 8 - check purchases\/opening stock/);
+  assert.ok(!/on hand: -8/.test(mail.body) && !/>-8</.test(mail.htmlBody), 'no raw negative stock shown');
+  assert.match(mail.body, /OUT {2}A {2}Milk {2}on hand: 0/);
+  assert.match(mail.body, /LOW {2}B {2}Bread {2}on hand: 4/);
 });

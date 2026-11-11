@@ -24,6 +24,25 @@ function setupWorkbook() {
   buildWorkbook_(ss);
 }
 
+/** Sheets from older versions; always removed by a rebuild. */
+var LEGACY_SHEETS = ['Invoice_Template'];
+
+/**
+ * Final sweep after a rebuild: delete legacy sheets (e.g. the hidden
+ * Invoice_Template from the old sheet-export invoice) and anything else that is
+ * not one of ours, so a rebuild always leaves a clean file.
+ */
+function removeUnknownSheets_(ss) {
+  var ours = Object.keys(SHEET).map(function (k) { return SHEET[k]; });
+  ss.getSheets().forEach(function (sh) {
+    var name = sh.getName();
+    if (ours.indexOf(name) === -1 || LEGACY_SHEETS.indexOf(name) !== -1) {
+      console.log('Rebuild: removing sheet "' + name + '"');
+      ss.deleteSheet(sh);
+    }
+  });
+}
+
 /** True if any of our sheets exist or any sheet has data. */
 function workbookHasContent_(ss) {
   return ss.getSheets().some(function (sh) {
@@ -52,6 +71,7 @@ function buildWorkbook_(ss) {
   buildImportLogSheet_(ss.insertSheet(SHEET.IMPORT_LOG, 5));
   buildSettingsSheet_(ss.insertSheet(SHEET.SETTINGS, 6), settings);
   ss.deleteSheet(temp);
+  removeUnknownSheets_(ss);
 
   buildDashboardSheet_(dash, settings);
   SpreadsheetApp.flush();
@@ -171,7 +191,7 @@ function buildInventorySheet_(sh, inventory) {
   sh.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",SUMIF(Sales!C2:C,A2:A,Sales!E2:E)))');
   sh.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","",C2:C+D2:D-E2:E))');
   sh.getRange('G2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(VLOOKUP(A2:A,Products!A2:F,6,FALSE),0)))');
-  sh.getRange('H2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IF(F2:F<=0,"OUT",IF(F2:F<=G2:G,"LOW","OK"))))');
+  sh.getRange('H2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IF(F2:F<0,"OVERSOLD",IF(F2:F=0,"OUT",IF(F2:F<=G2:G,"LOW","OK")))))');
 
   var rows = sh.getMaxRows() - 1;
   sh.getRange(2, 3, rows, 2).setDataValidation(SpreadsheetApp.newDataValidation()
@@ -180,6 +200,8 @@ function buildInventorySheet_(sh, inventory) {
 
   var status = sh.getRange(2, 8, rows, 1);
   sh.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(STATUS.OVERSOLD)
+      .setBackground('#b3261e').setFontColor('#ffffff').setBold(true).setRanges([status]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(STATUS.OUT)
       .setBackground('#f4c7c3').setFontColor('#b3261e').setBold(true).setRanges([status]).build(),
     SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(STATUS.LOW)
@@ -191,7 +213,7 @@ function buildInventorySheet_(sh, inventory) {
   ['B:B', 'E:E', 'F:F', 'G:G', 'H:H'].forEach(function (a1) {
     protectRange_(sh.getRange(a1), 'Inventory: ' + a1.charAt(0) + ' is a formula');
   });
-  sh.getRange('A1').setNote('On Hand = Opening Stock + Purchases - Sold. Status: OUT <= 0, LOW <= Reorder Level, else OK.');
+  sh.getRange('A1').setNote('On Hand = Opening Stock + Purchases - Sold. Status: OVERSOLD < 0 (check purchases/opening stock), OUT = 0, LOW <= Reorder Level, else OK.');
   sh.setColumnWidth(1, 90); sh.setColumnWidth(2, 220); sh.setColumnWidths(3, 6, 105);
 }
 
