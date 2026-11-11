@@ -1,0 +1,20 @@
+# clasp: credentials and per-machine project binding
+.clasprc.json
+.clasp.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local secrets / env
+.env
+.env.*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code working notes
+CLAUDE.md

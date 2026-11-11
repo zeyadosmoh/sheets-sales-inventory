@@ -1,0 +1,15 @@
+{
+  "name": "sheets-sales-inventory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shop Sales & Inventory system on Google Sheets + Apps Script (synthetic sample data).",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "TZ=Africa/Cairo node --test tests/",
+    "scan": "bash scripts/secret-scan.sh",
+    "push": "clasp push"
+  }
+}
