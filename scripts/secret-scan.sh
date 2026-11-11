@@ -51,7 +51,7 @@ if [ ${#EXISTING[@]} -gt 0 ]; then
   for f in "${EXISTING[@]}"; do case "$f" in samples/*) ;; *) EMAIL_FILES+=("$f") ;; esac; done
   if [ ${#EMAIL_FILES[@]} -gt 0 ]; then
     if out=$(grep -noEI '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- "${EMAIL_FILES[@]}" 2>/dev/null \
-        | grep -viE '@(example\.(com|org|net)|[a-z0-9.-]*\.example|test\.invalid)$' \
+        | grep -viE '@(example\.(com|org|net)|[a-z0-9.-]*\.(example|test|invalid))$' \
         | grep -viE ':(noreply|no-reply)@' ); then
       report "email address found (use example.com placeholders):"; echo "$out"
     fi

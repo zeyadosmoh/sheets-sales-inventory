@@ -1,0 +1,33 @@
+ Sale Date ,SKU , Quantity, Invoice No ,Customer Name
+2026-11-01,BEV-001,2,,Mona Ali
+01/11/2026,bev-003,1,,mona ali
+" 2/11/2026 ",snk 1,3,,WALK-IN
+"Nov 2, 2026",SNK003,1 pcs,,"  omar   hassan "
+2026/11/03,dai-001, ٢ ,,Sara Ibrahim
+٠٣/١١/٢٠٢٦,DAI_002,١,,Sara Ibrahim
+4-Nov-26,BAK-001,2,,Walk-in
+2026-11-04 18:45,bak 3,5,,Karim Saleh
+46333,HOU-001,1,,Dina Kamal
+05.11.2026,PER-002,2,,dina kamal
+,,,,
+2026-11-05,BEV-001,4,,Walk-in
+6 November 2026,SNK-001,2,,Tarek Adel
+06/11/2026,DAI-001,1,,Heba Nabil
+2026-11-07,PER-002,3,,Walk-in
+2026-11-08,HOU-001,2,,"Youssef  Ali"
+2026-11-08,BEV-003,6,,Youssef Ali
+2026-11-09,BAK-003,10,inv-2026-900,Laila Fathy
+2026-11-09,SNK-003,2,,Walk-in
+Nov 10 2026,DAI-002,1,,"Samir, Amr"
+10/11/2026,BEV-001,2,,Rana Mahmoud
+01-11-2026, BEV 001 ,٢,,MONA ALI
+6 November 2026,SNK-001,2,,Tarek Adel
+
+08/11/2026,bev-003,6,,youssef ali
+2026-11-03,XYZ-999,1,,Omar Hassan
+31/11/2026,BEV-001,1,,Omar Hassan
+2026-12-25,SNK-001,1,,Walk-in
+,DAI-001,2,,Walk-in
+2026-11-05,BAK-001,0,,Walk-in
+2026-11-06,HOU-001,two,,Walk-in
+2026-11-07,,1,,Walk-in

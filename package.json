@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "TZ=Africa/Cairo node --test tests/",
+    "test": "TZ=Africa/Cairo node --test \"tests/**/*.test.js\"",
     "scan": "bash scripts/secret-scan.sh",
     "push": "clasp push"
   }
