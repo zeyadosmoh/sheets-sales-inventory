@@ -37,15 +37,27 @@ function generateInvoiceForSelection() {
     return;
   }
 
-  var template = sheet_(SHEET.INVOICE);
-  fillInvoiceTemplate_(template, invoice);
-  var blob = exportSheetAsPdf_(ss, template, invoiceFileName(invoice));
-  var file = getInvoiceFolder_().createFile(blob);
+  try {
+    // Resolve the Drive folder BEFORE touching sheet visibility: a Drive failure
+    // then happens while every sheet is still in its normal state.
+    var folderId = getInvoiceFolderId_();
+    var template = sheet_(SHEET.INVOICE);
+    fillInvoiceTemplate_(template, invoice);
+    var blob = exportSheetAsPdf_(ss, template, invoiceFileName(invoice));
+    var file = savePdfToFolder_(blob, folderId);
+  } catch (e) {
+    console.error('Invoice PDF failed for ' + invoiceNo + ': ' + (e && e.stack || e));
+    ui.alert('Could not create the invoice PDF',
+      'Invoice ' + invoiceNo + ' was not saved. Your sheets were left unchanged.\n\n' +
+      'Details: ' + (e && e.message ? e.message : String(e)) + '\n\n' +
+      'Try again in a moment. If it keeps failing, reload the spreadsheet and re-run it.',
+      ui.ButtonSet.OK);
+    return;
+  }
 
-  var url = file.getUrl();
   var html = HtmlService.createHtmlOutput(
-    '<p style="font-family:Arial,sans-serif">Saved <b>' + escapeHtml(file.getName()) + '</b> to Drive folder "' +
-    escapeHtml(INVOICE_FOLDER_NAME) + '".</p><p><a href="' + escapeHtml(url) + '" target="_blank">Open the PDF</a></p>')
+    '<p style="font-family:Arial,sans-serif">Saved <b>' + escapeHtml(file.name) + '</b> to Drive folder "' +
+    escapeHtml(INVOICE_FOLDER_NAME) + '".</p><p><a href="' + escapeHtml(file.webViewLink) + '" target="_blank">Open the PDF</a></p>')
     .setWidth(420).setHeight(140);
   ui.showModalDialog(html, 'Invoice ' + invoiceNo);
 }
@@ -63,9 +75,9 @@ function fillInvoiceTemplate_(sh, invoice) {
 
 /**
  * Export ONE sheet as PDF using Spreadsheet.getAs(), which exports every
- * visible sheet - so hide all others for the export, then restore.
- * VERIFY IN PHASE B (scope: spreadsheets.currentonly, no external_request).
- * If this fails, swap only this function (e.g. export URL + UrlFetchApp).
+ * visible sheet - so hide all others only for the export itself, then ALWAYS
+ * restore the original visibility in finally (each restore step is isolated so
+ * one failure cannot leave other sheets hidden). No Drive calls happen in here.
  */
 function exportSheetAsPdf_(ss, target, fileName) {
   var sheets = ss.getSheets();
@@ -78,26 +90,46 @@ function exportSheetAsPdf_(ss, target, fileName) {
     return ss.getAs('application/pdf').setName(fileName);
   } finally {
     // Show first (a spreadsheet cannot have every sheet hidden), then re-hide.
-    sheets.forEach(function (s, i) { if (!wasHidden[i]) s.showSheet(); });
-    sheets.forEach(function (s, i) { if (wasHidden[i]) s.hideSheet(); });
-    if (active && !active.isSheetHidden()) ss.setActiveSheet(active);
-    SpreadsheetApp.flush();
+    sheets.forEach(function (s, i) { if (!wasHidden[i]) safely_(function () { s.showSheet(); }); });
+    sheets.forEach(function (s, i) { if (wasHidden[i]) safely_(function () { s.hideSheet(); }); });
+    safely_(function () { if (active && !active.isSheetHidden()) ss.setActiveSheet(active); });
+    safely_(function () { SpreadsheetApp.flush(); });
   }
 }
 
-/** Folder created by this script (drive.file scope). Re-created if it was deleted. */
-function getInvoiceFolder_() {
+function safely_(fn) {
+  try { fn(); } catch (e) { console.error('Sheet visibility restore step failed: ' + e); }
+}
+
+/*
+ * Drive access goes through the Advanced Drive Service (v3), NOT DriveApp:
+ * DriveApp always demands the full "drive" scope, while the Drive API honors
+ * drive.file (files/folders this script created).
+ */
+
+var FOLDER_MIME = 'application/vnd.google-apps.folder';
+
+/** Id of the invoice folder this script created. Re-created if missing or trashed. */
+function getInvoiceFolderId_() {
   var props = PropertiesService.getDocumentProperties();
   var id = props.getProperty(INVOICE_FOLDER_PROP);
   if (id) {
     try {
-      var existing = DriveApp.getFolderById(id);
-      if (!existing.isTrashed()) return existing;
+      var existing = Drive.Files.get(id, { fields: 'id,trashed' });
+      if (existing && !existing.trashed) return existing.id;
     } catch (e) {
-      // Folder gone or not accessible: fall through and create a new one.
+      // Folder deleted or no longer accessible: fall through and create a new one.
     }
   }
-  var folder = DriveApp.createFolder(INVOICE_FOLDER_NAME);
-  props.setProperty(INVOICE_FOLDER_PROP, folder.getId());
-  return folder;
+  var folder = Drive.Files.create({ name: INVOICE_FOLDER_NAME, mimeType: FOLDER_MIME }, null, { fields: 'id' });
+  props.setProperty(INVOICE_FOLDER_PROP, folder.id);
+  return folder.id;
+}
+
+/** Upload the PDF into the folder; returns {id, name, webViewLink}. */
+function savePdfToFolder_(blob, folderId) {
+  return Drive.Files.create(
+    { name: blob.getName(), parents: [folderId], mimeType: 'application/pdf' },
+    blob,
+    { fields: 'id,name,webViewLink' });
 }

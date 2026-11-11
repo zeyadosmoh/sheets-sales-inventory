@@ -280,24 +280,37 @@ function buildDashboardSheet_(sh, settings) {
   sh.getRange('B8').setNumberFormat('0.0%');
   sh.getRange('B9').setNumberFormat('0');
 
-  [[DASH.MONTH_TITLE, 'Monthly revenue', DASH.MONTH_HEADER, ['Month', 'Revenue']],
-    [DASH.CAT_TITLE, 'Revenue by category', DASH.CAT_HEADER, ['Category', 'Revenue']],
-    [DASH.TOP_TITLE, 'Top 10 products', DASH.TOP_HEADER, ['Product', 'Units', 'Revenue']]
-  ].forEach(function (t) {
-    sh.getRange(t[0]).setValue(t[1]).setFontWeight('bold').setFontSize(12);
-    sh.getRange(t[2]).setValues([t[3]]).setFontWeight('bold').setBackground(HEADER_BG).setFontColor('#ffffff');
-  });
-  sh.getRange('D6:D17').setNumberFormat('@');
-  sh.getRange('E6:E17').setNumberFormat(currencyFormat_(settings.currency));
-  sh.getRange('G6:G15').setNumberFormat('@');
-  sh.getRange('H6:H15').setNumberFormat(currencyFormat_(settings.currency));
-  sh.getRange('J6:J15').setNumberFormat('@');
-  sh.getRange('L6:L15').setNumberFormat(currencyFormat_(settings.currency));
+  styleDashboardTables_(sh, settings);
 
   sh.setColumnWidth(1, 170); sh.setColumnWidth(2, 150); sh.setColumnWidth(3, 24);
   sh.setColumnWidth(4, 100); sh.setColumnWidth(5, 120); sh.setColumnWidth(6, 24);
   sh.setColumnWidth(7, 120); sh.setColumnWidth(8, 120); sh.setColumnWidth(9, 24);
   sh.setColumnWidth(10, 190); sh.setColumnWidth(11, 60); sh.setColumnWidth(12, 120);
+}
+
+/**
+ * Table titles/headers, number formats and uniform row heights. Idempotent:
+ * also called by Shop Tools > Refresh dashboard so existing files pick up layout fixes.
+ */
+function styleDashboardTables_(sh, settings) {
+  [[DASH.MONTH_TITLE, 'Monthly revenue', DASH.MONTH_HEADER, ['Month', 'Revenue']],
+    [DASH.CAT_TITLE, 'Revenue by category', DASH.CAT_HEADER, ['Category', 'Revenue']],
+    [DASH.TOP_TITLE, 'Top 10 products', DASH.TOP_HEADER, ['Product', 'Revenue', 'Units']]
+  ].forEach(function (t) {
+    sh.getRange(t[0]).setValue(t[1]).setFontWeight('bold').setFontSize(12);
+    sh.getRange(t[2]).setValues([t[3]]).setFontWeight('bold').setBackground(HEADER_BG).setFontColor('#ffffff');
+  });
+  var money = currencyFormat_(settings.currency);
+  sh.getRange('D6:D17').setNumberFormat('@');
+  sh.getRange('E6:E17').setNumberFormat(money);
+  sh.getRange('G6:G15').setNumberFormat('@');
+  sh.getRange('H6:H15').setNumberFormat(money);
+  sh.getRange('J6:J15').setNumberFormat('@');
+  sh.getRange('K6:K15').setNumberFormat(money);
+  sh.getRange('L6:L15').setNumberFormat('#,##0');
+  // One height for every table row (titles, headers, KPI and data rows) so the
+  // larger KPI/title fonts do not make some rows taller than others.
+  sh.setRowHeightsForced(DASH.TABLE_FIRST_ROW, DASH.TABLE_LAST_ROW - DASH.TABLE_FIRST_ROW + 1, DASH.TABLE_ROW_HEIGHT);
 }
 
 function buildDashboardCharts_(sh) {
@@ -312,8 +325,9 @@ function buildDashboardCharts_(sh) {
     .setOption('title', 'Revenue by category').setOption('pieHole', 0.4)
     .setOption('width', 520).setOption('height', 320)
     .setPosition(19, 7, 0, 0).build());
+  // One contiguous range (Product | Revenue); the old split J + L ranges did not render.
   sh.insertChart(sh.newChart().asBarChart()
-    .addRange(sh.getRange('J5:J15')).addRange(sh.getRange('L5:L15')).setNumHeaders(1)
+    .addRange(sh.getRange('J5:K15')).setNumHeaders(1)
     .setOption('title', 'Top 10 products by revenue').setOption('legend', { position: 'none' })
     .setOption('width', 1080).setOption('height', 360)
     .setPosition(37, 1, 0, 0).build());

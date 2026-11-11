@@ -11,12 +11,16 @@ var DASH = {
   KPI_NAMES: ['Revenue', 'Orders', 'Avg order value', 'Units sold', 'Gross margin', 'Low / out of stock items', 'Top product'],
   MONTH_TITLE: 'D4', MONTH_HEADER: 'D5:E5', MONTH_DATA: 'D6:E17', MONTH_ROWS: 12,
   CAT_TITLE: 'G4', CAT_HEADER: 'G5:H5', CAT_DATA: 'G6:H15', CAT_ROWS: 10,
-  TOP_TITLE: 'J4', TOP_HEADER: 'J5:L5', TOP_DATA: 'J6:L15', TOP_ROWS: 10
+  TOP_TITLE: 'J4', TOP_HEADER: 'J5:L5', TOP_DATA: 'J6:L15', TOP_ROWS: 10, // Product | Revenue | Units
+  TABLE_FIRST_ROW: 4, TABLE_LAST_ROW: 17, TABLE_ROW_HEIGHT: 24
 };
 
 /** Menu entry. */
 function refreshDashboard() {
+  var sh = sheet_(SHEET.DASHBOARD);
+  styleDashboardTables_(sh, readSettings_().values);
   var k = refreshDashboard_();
+  buildDashboardCharts_(sh);
   ss_().toast('Revenue ' + formatMoney(k.revenue, readSettings_().values.currency) + ' from ' + k.orders + ' orders.', 'Dashboard refreshed', 5);
 }
 
@@ -49,7 +53,7 @@ function refreshDashboard_() {
   sh.getRange(DASH.CAT_DATA).setValues(padRows_(
     k.revenueByCategory.map(function (c) { return [c.category, c.revenue]; }), DASH.CAT_ROWS, 2));
   sh.getRange(DASH.TOP_DATA).setValues(padRows_(
-    k.topProducts.map(function (p) { return [p.name, p.units, p.revenue]; }), DASH.TOP_ROWS, 3));
+    k.topProducts.map(function (p) { return [p.name, p.revenue, p.units]; }), DASH.TOP_ROWS, 3));
   sh.getRange('B9').setFontColor(lowCount ? '#b3261e' : '#274e13');
   return k;
 }
